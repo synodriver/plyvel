@@ -282,7 +282,7 @@ def test_write_batch_transaction(db):
             wb.put(b'key', b'value')
             raise ValueError()
 
-    assert list(db.iterator()) == []
+    assert not list(db.iterator())
 
 
 def test_write_batch_bytes_like(db):
@@ -460,7 +460,7 @@ def test_range_iteration(db):
     expected = [b'1', b'2']
     assert actual == expected
 
-    assert list(db.iterator(start=b'3', stop=b'0')) == []
+    assert not list(db.iterator(start=b'3', stop=b'0'))
 
     # Only start (inclusive)
     assert_iterator_behaviour(
@@ -501,7 +501,7 @@ def test_reverse_range_iteration(db):
     db.put(b'4', b'4')
     db.put(b'5', b'5')
 
-    assert list(db.iterator(start=b'3', stop=b'0', reverse=True)) == []
+    assert not list(db.iterator(start=b'3', stop=b'0', reverse=True))
 
     # Only start (inclusive)
     assert_iterator_behaviour(
@@ -774,7 +774,7 @@ def test_snapshot(db):
     assert list(snapshot.iterator(include_value=False)) == [b'b', b'c']
 
     # Snapshots are directly iterable, just like DB
-    assert list(k for k, v in snapshot) == [b'b', b'c']
+    assert [k for k, v in snapshot] == [b'b', b'c']
 
 
 def test_snapshot_closing(db):
@@ -903,12 +903,12 @@ def test_threading(db):
             db.put(k, v)
 
     def iterate_full(db):
-        for i in range(randint(4, 7)):
+        for _ in range(randint(4, 7)):
             for key, value in db.iterator(reverse=True):
                 pass
 
     def iterate_short(db):
-        for i in range(randint(200, 700)):
+        for _ in range(randint(200, 700)):
             it = db.iterator()
             list(itertools.islice(it, randint(50, 100)))
 
@@ -956,10 +956,7 @@ def test_comparator(db_dir):
         b = b.lower()
         if a < b:
             return -1
-        if a > b:
-            return 1
-        else:
-            return 0
+        return 1 if a > b else 0
 
     comparator_name = b"CaseInsensitiveComparator"
 
@@ -1066,7 +1063,7 @@ def test_prefixed_db(db):
     # Delete all data in db_a
     for key in db_a.iterator(include_value=False):
         db_a.delete(key)
-    assert len(list(db_a)) == 0
+    assert not list(db_a)
 
     # The complete db and the 'b' prefix should remain untouched
     assert len(list(db)) == 1000
