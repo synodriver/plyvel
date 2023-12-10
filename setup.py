@@ -1,7 +1,15 @@
 from os.path import join, dirname
 from setuptools import setup
 from setuptools.extension import Extension
+from collections import defaultdict
+from setuptools.command.build_ext import build_ext
 import platform
+
+try:
+    from Cython.Build import cythonize
+    has_cython = True
+except ImportError:
+    has_cython = False
 
 CURRENT_DIR = dirname(__file__)
 
@@ -19,14 +27,49 @@ extra_compile_args = ['-Wall', '-g', '-x', 'c++', '-std=c++11']
 if platform.system() == 'Darwin':
     extra_compile_args += ['-stdlib=libc++']
 
-ext_modules = [
-    Extension(
+BUILD_ARGS = defaultdict(lambda: ["-O3", "-g0"])
+
+for compiler, args in [
+    ("msvc", ["/EHsc", "/DHUNSPELL_STATIC", "/Oi", "/O2", "/Ot"]),
+    ("gcc", ["-O3", "-g0"]),
+]:
+    BUILD_ARGS[compiler] = args
+
+
+class build_ext_compiler_check(build_ext):
+    def build_extensions(self):
+        compiler = self.compiler.compiler_type
+        args = BUILD_ARGS[compiler]
+        for ext in self.extensions:
+            ext.extra_compile_args = args
+        super().build_extensions()
+
+
+if not has_cython:
+    ext_modules = [
+        Extension(
+            'plyvel._plyvel',
+            sources=['plyvel/_plyvel.cpp', 'plyvel/comparator.cpp'],
+            libraries=['leveldb'],
+            include_dirs=[r"D:\conda\envs\py310\Library\include"],
+            library_dirs=[r"D:\conda\envs\py310\Library\lib", r"D:\conda\envs\py310\Library\bin"],
+            extra_compile_args=extra_compile_args,
+        )
+    ]
+else:
+    ext_modules = cythonize([Extension(
         'plyvel._plyvel',
-        sources=['plyvel/_plyvel.cpp', 'plyvel/comparator.cpp'],
+        sources=['plyvel/_plyvel.pyx', 'plyvel/comparator.cpp'],
         libraries=['leveldb'],
-        extra_compile_args=extra_compile_args,
-    )
-]
+        include_dirs=[r"D:\conda\envs\py310\Library\include"],
+        library_dirs=[r"D:\conda\envs\py310\Library\lib", r"D:\conda\envs\py310\Library\bin"],
+        extra_compile_args=extra_compile_args)
+    ], compiler_directives={
+        "cdivision": True,
+        "embedsignature": True,
+        "boundscheck": False,
+        "wraparound": False,
+    }, )
 
 setup(
     name='plyvel',
@@ -54,5 +97,6 @@ setup(
         "Topic :: Database",
         "Topic :: Database :: Database Engines/Servers",
         "Topic :: Software Development :: Libraries :: Python Modules",
-    ]
+    ],
+    cmdclass={"build_ext": build_ext_compiler_check},
 )
