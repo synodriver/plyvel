@@ -23,7 +23,8 @@ Package Index <http://pypi.python.org/>`_ (PyPI) using ``pip``::
 
 (In case you're feeling old-fashioned: downloading a source tarball, unpacking
 it and installing it manually with ``python setup.py install`` should also
-work.)
+work. If you’ve cloned the repository directly, remember to run `make` before
+installation.)
 
 The Plyvel source package does not include a copy of LevelDB itself.
 Plyvel requires LevelDB development headers and an installed shared
